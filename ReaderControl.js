@@ -1,37 +1,9 @@
-class Reader {
-  #voice;
-
-  constructor() {
-    window.speechSynthesis.addEventListener("voiceschanged", () =>
-      this.#getVoice()
-    );
-  }
-
-  #getVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    const voice =
-      voices.find((v) => v.voiceURI.startsWith("Google UK English Female")) ??
-      voices.find((v) => v.lang.startsWith("en"));
-    this.#voice = voice;
-    console.log("voices", voice);
-  }
-
-  speakAsync(text) {
-    return new Promise((resolve, reject) => {
-      const utt = new globalThis.SpeechSynthesisUtterance(text);
-      utt.voice = this.#voice;
-      utt.addEventListener("end", resolve, { once: true });
-      utt.addEventListener("error", reject, { once: true });
-      globalThis.speechSynthesis.speak(utt);
-    });
-  }
-}
+import { Reader } from "./Reader.js";
 
 export class ReaderControl extends HTMLElement {
   #dom;
   #readableContents;
   #index = 1;
-  #reading = false;
   #reader;
 
   constructor() {
@@ -51,15 +23,9 @@ export class ReaderControl extends HTMLElement {
   }
 
   async #read() {
-    if (this.#reading) {
-      return;
-    }
-
-    this.#reading = true;
     const content = this.#readableContents[this.#index];
     console.log("will read", content.text);
-    await this.#reader.speakAsync(content.text);
-    this.#reading = false;
+    await this.#reader.readAsync(content.text);
   }
 
   #updateReadableContents() {
