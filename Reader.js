@@ -5,6 +5,7 @@ export class Reader {
   #index;
   #speech = new Speech();
   #onchange = () => null;
+  #reading = false;
 
   constructor(contents = []) {
     this.#contents = contents;
@@ -12,7 +13,7 @@ export class Reader {
   }
 
   get reading() {
-    return this.#speech.speaking;
+    return this.#reading;
   }
 
   get length() {
@@ -37,41 +38,60 @@ export class Reader {
     this.#index = values.length ? 0 : -1;
   }
 
-  next() {
-    this.stop();
+  #_next() {
     const nextIndex = this.#index + 1;
     this.#index = Math.min(this.length - 1, nextIndex);
     this.#onchange(this.#index);
   }
 
-  prev() {
+  next() {
     this.stop();
+    this.#_next();
+  }
+
+  #_prev() {
     const nextIndex = this.#index - 1;
     this.#index = Math.max(nextIndex, 0);
     this.#onchange(this.#index);
   }
 
-  stop() {
-    this.#speech.stop();
+  prev() {
+    this.stop();
+    this.#_prev();
   }
 
-  // async readOnAsync() {
-  //   while (this.#speech.speaking) {
-  //     await this.readCurrentAsync();
-  //     if (this.index + 1 < this.length) {
-  //       this.next();
-  //     } else {
-  //       this.stop();
-  //     }
-  //   }
-  // }
+  stop() {
+    this.#speech.stop();
+    this.#reading = false;
+  }
+
+  reset() {
+    this.#index = contents.length ? 0 : -1;
+    this.#onchange(0);
+  }
+
+  async readOnAsync() {
+    this.#reading = true;
+    while (this.#reading) {
+      const currentIndex = this.index;
+      await this.readCurrentAsync();
+      if (!this.#reading) {
+        break;
+      }
+      this.#_next();
+      if (this.index === currentIndex) {
+        this.stop();
+        this.reset();
+      }
+    }
+  }
 
   async readCurrentAsync() {
     const content = this.#contents[this.#index];
     if (!content) {
       console.warn(`No content found at index ${this.#index}`);
     }
-    if (this.reading) return;
+    if (this.#speech.speaking) return;
     await this.#speech.speakAsync(content);
   }
 }

@@ -1,4 +1,3 @@
-console.log("hello from JS!");
 import { ReaderControl } from "./ReaderControl.js";
 
 if (!customElements.get("reader-control")) {

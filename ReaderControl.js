@@ -1,4 +1,5 @@
 import { Reader } from "./Reader.js";
+import * as Icons from "./Icons.js";
 
 export class ReaderControl extends HTMLElement {
   #dom;
@@ -12,25 +13,11 @@ export class ReaderControl extends HTMLElement {
     this.#reader.onchange = () => this.#updateDisplay();
     const root = this.attachShadow({ mode: "open" });
     this.#renderChildren(root);
-    // this.#dom.refresh.addEventListener("click", () => {
-    //   this.#updateReadableContents();
-    //   this.#updateDisplay();
-    // });
 
     this.#dom.play.addEventListener("click", () => this.#read());
-    this.#dom.next.addEventListener("click", () => {
-      this.#reader.next();
-      console.log(`${this.#reader.index + 1} / ${this.#reader.length}`);
-    });
-    this.#dom.prev.addEventListener("click", () => {
-      this.#reader.prev();
-      console.log(`${this.#reader.index + 1} / ${this.#reader.length}`);
-    });
-
-    this.#dom.stop.addEventListener("click", () => {
-      this.#reader.stop();
-      console.log(`stopped`);
-    });
+    this.#dom.next.addEventListener("click", () => this.#reader.next());
+    this.#dom.prev.addEventListener("click", () => this.#reader.prev());
+    this.#dom.stop.addEventListener("click", () => this.#reader.stop());
   }
 
   connectedCallback() {
@@ -39,7 +26,7 @@ export class ReaderControl extends HTMLElement {
   }
 
   #read() {
-    this.#reader.readCurrentAsync();
+    this.#reader.readOnAsync();
   }
 
   #updateDisplay() {
@@ -66,11 +53,10 @@ export class ReaderControl extends HTMLElement {
     const div = document.createElement("div");
     div.classList.add("controlContainer");
     const buttons = [
-      { icon: "⏮️", name: "prev" },
-      { icon: "⏹️", name: "stop" },
-      { icon: "▶️", name: "play" },
-      { icon: "⏭️", name: "next" },
-      // { icon: "🔄", name: "refresh" },
+      { icon: Icons.prev, name: "prev" },
+      { icon: Icons.stop, name: "stop" },
+      { icon: Icons.play, name: "play" },
+      { icon: Icons.next, name: "next" },
     ];
 
     const dom = {};
@@ -95,7 +81,7 @@ export class ReaderControl extends HTMLElement {
     const btn = document.createElement("button");
     btn.classList.add("controlButton");
     btn.id = `${name}-btn`;
-    btn.textContent = icon;
+    btn.innerHTML = icon;
     return btn;
   }
 
@@ -114,13 +100,33 @@ const style = `
   .controlButton {
     height: 48px;
     width: 48px;
+    color: #5f6368;
+    border: 1px solid #5f6368;
+    border-radius: 4px;
+  }
+
+  .controlButton:hover {
+    background-color: rgba(0,0,0,0.15);
+  }
+
+  .controlButton:active {
+    background-color: rgba(0,0,0,0.3);
+    color: rgba(0,0,0,0.8)
+  }
+
+  .controlButton svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+    transform: translateY(1px);
   }
   
   .display {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #554f55;
+    /*background-color: #554f55;*/
+    background-color: #5f6368;
     color: white;
     font-family: monospace;
     font-size: 10px;
