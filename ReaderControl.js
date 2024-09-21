@@ -16,16 +16,18 @@ export class ReaderControl extends HTMLElement {
     );
 
     this.#dom.play.addEventListener("click", () => this.#read());
+    this.#dom.next.addEventListener("click", () => {
+      this.#reader.next();
+      console.log(`${this.#reader.index + 1} / ${this.#reader.length}`);
+    });
   }
 
   connectedCallback() {
     this.#updateReadableContents();
   }
 
-  async #read() {
-    const content = this.#readableContents[this.#index];
-    console.log("will read", content.text);
-    await this.#reader.readAsync(content.text);
+  #read() {
+    this.#reader.readCurrentAsync();
   }
 
   #updateReadableContents() {
@@ -40,6 +42,7 @@ export class ReaderControl extends HTMLElement {
     console.log("readable contents", readable);
 
     this.#readableContents = readable;
+    this.#reader.contents = readable.map((x) => x.text);
   }
 
   #renderChildren(root) {

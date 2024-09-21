@@ -1,39 +1,51 @@
-export class Reader {
-  #voice;
-  #reading = false;
+import { Speech } from "./Speech.js";
 
-  constructor() {
-    window.speechSynthesis.addEventListener("voiceschanged", () =>
-      this.#getVoice()
-    );
+export class Reader {
+  #contents;
+  #index;
+  #speech = new Speech();
+
+  constructor(contents = []) {
+    this.#contents = contents;
+    this.#index = contents.length ? 0 : -1;
   }
 
   get reading() {
-    return this.#reading;
+    return this.#speech.speaking;
   }
 
-  #getVoice() {
-    const voices = window.speechSynthesis.getVoices();
-    const voice =
-      voices.find((v) => v.voiceURI.startsWith("Google UK English Female")) ??
-      voices.find((v) => v.lang.startsWith("en"));
-    this.#voice = voice;
-    console.log("voices", voice);
+  get length() {
+    return this.#contents.length;
   }
 
-  #speakAsync(text) {
-    return new Promise((resolve, reject) => {
-      const utt = new globalThis.SpeechSynthesisUtterance(text);
-      utt.voice = this.#voice;
-      utt.addEventListener("end", resolve, { once: true });
-      utt.addEventListener("error", reject, { once: true });
-      globalThis.speechSynthesis.speak(utt);
-    });
+  get index() {
+    return this.#index;
   }
 
-  async readAsync(text) {
-    if (this.#reading) return;
+  /**
+   * @param {string[]} values
+   */
+  set contents(values) {
+    this.#contents = values;
+    this.#index = values.length ? 0 : -1;
+  }
 
-    await this.#speakAsync(text);
+  next() {
+    const nextIndex = this.#index + 1;
+    this.#index = Math.min(this.length - 1, nextIndex);
+  }
+
+  prev() {
+    const nextIndex = this.#index - 1;
+    this.#index = Math.max(nextIndex, 0);
+  }
+
+  async readCurrentAsync() {
+    const content = this.#contents[this.#index];
+    if (!content) {
+      console.warn(`No content found at index ${this.#index}`);
+    }
+    if (this.reading) return;
+    await this.#speech.speakAsync(content);
   }
 }
