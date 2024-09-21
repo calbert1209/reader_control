@@ -4,6 +4,7 @@ export class Reader {
   #contents;
   #index;
   #speech = new Speech();
+  #onchange = () => null;
 
   constructor(contents = []) {
     this.#contents = contents;
@@ -22,6 +23,12 @@ export class Reader {
     return this.#index;
   }
 
+  set onchange(cb) {
+    if (typeof cb === "function") {
+      this.#onchange = cb;
+    }
+  }
+
   /**
    * @param {string[]} values
    */
@@ -31,14 +38,33 @@ export class Reader {
   }
 
   next() {
+    this.stop();
     const nextIndex = this.#index + 1;
     this.#index = Math.min(this.length - 1, nextIndex);
+    this.#onchange(this.#index);
   }
 
   prev() {
+    this.stop();
     const nextIndex = this.#index - 1;
     this.#index = Math.max(nextIndex, 0);
+    this.#onchange(this.#index);
   }
+
+  stop() {
+    this.#speech.stop();
+  }
+
+  // async readOnAsync() {
+  //   while (this.#speech.speaking) {
+  //     await this.readCurrentAsync();
+  //     if (this.index + 1 < this.length) {
+  //       this.next();
+  //     } else {
+  //       this.stop();
+  //     }
+  //   }
+  // }
 
   async readCurrentAsync() {
     const content = this.#contents[this.#index];

@@ -1,9 +1,10 @@
 export class Speech {
   #speaking = false;
-
+  #pitch;
   #voice;
 
-  constructor() {
+  constructor(pitch = 0.8) {
+    this.#pitch = pitch;
     window.speechSynthesis.addEventListener("voiceschanged", () =>
       this.#getVoice()
     );
@@ -24,6 +25,10 @@ export class Speech {
     }
   }
 
+  stop() {
+    window.speechSynthesis.cancel();
+  }
+
   #getVoice() {
     const voices = window.speechSynthesis.getVoices();
     const enVoices = voices.filter((v) => v.lang.startsWith("en"));
@@ -40,8 +45,19 @@ export class Speech {
     return new Promise((resolve, reject) => {
       const utt = new globalThis.SpeechSynthesisUtterance(text);
       utt.voice = this.#voice;
+      utt.pitch = this.#pitch;
       utt.addEventListener("end", resolve, { once: true });
-      utt.addEventListener("error", reject, { once: true });
+      utt.addEventListener(
+        "error",
+        (e) => {
+          if ((e.type === "error") & (e.error === "interrupted")) {
+            resolve();
+          } else {
+            reject();
+          }
+        },
+        { once: true }
+      );
       globalThis.speechSynthesis.speak(utt);
     });
   }

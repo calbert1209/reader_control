@@ -3,31 +3,48 @@ import { Reader } from "./Reader.js";
 export class ReaderControl extends HTMLElement {
   #dom;
   #readableContents;
-  #index = 1;
+  #index = 0;
   #reader;
 
   constructor() {
     super();
     this.#reader = new Reader();
+    this.#reader.onchange = () => this.#updateDisplay();
     const root = this.attachShadow({ mode: "open" });
     this.#renderChildren(root);
-    this.#dom.refresh.addEventListener("click", () =>
-      this.#updateReadableContents()
-    );
+    // this.#dom.refresh.addEventListener("click", () => {
+    //   this.#updateReadableContents();
+    //   this.#updateDisplay();
+    // });
 
     this.#dom.play.addEventListener("click", () => this.#read());
     this.#dom.next.addEventListener("click", () => {
       this.#reader.next();
       console.log(`${this.#reader.index + 1} / ${this.#reader.length}`);
     });
+    this.#dom.prev.addEventListener("click", () => {
+      this.#reader.prev();
+      console.log(`${this.#reader.index + 1} / ${this.#reader.length}`);
+    });
+
+    this.#dom.stop.addEventListener("click", () => {
+      this.#reader.stop();
+      console.log(`stopped`);
+    });
   }
 
   connectedCallback() {
     this.#updateReadableContents();
+    this.#updateDisplay();
   }
 
   #read() {
     this.#reader.readCurrentAsync();
+  }
+
+  #updateDisplay() {
+    const text = `${this.#reader.index + 1} / ${this.#reader.length}`;
+    this.#dom.display.textContent = text;
   }
 
   #updateReadableContents() {
@@ -49,11 +66,11 @@ export class ReaderControl extends HTMLElement {
     const div = document.createElement("div");
     div.classList.add("controlContainer");
     const buttons = [
-      { icon: "<<", name: "prev" },
-      { icon: "||", name: "pause" },
-      { icon: "|>", name: "play" },
-      { icon: ">>", name: "next" },
-      { icon: "🔎", name: "refresh" },
+      { icon: "⏮️", name: "prev" },
+      { icon: "⏹️", name: "stop" },
+      { icon: "▶️", name: "play" },
+      { icon: "⏭️", name: "next" },
+      // { icon: "🔄", name: "refresh" },
     ];
 
     const dom = {};
@@ -66,6 +83,11 @@ export class ReaderControl extends HTMLElement {
     root.appendChild(div);
     const styleEl = this.#createStyle(style);
     root.appendChild(styleEl);
+    const display = document.createElement("div");
+    display.classList.add("display");
+    display.textContent = "0 / 0";
+    div.insertBefore(display, dom.refresh);
+    dom["display"] = display;
     this.#dom = dom;
   }
 
@@ -85,8 +107,25 @@ export class ReaderControl extends HTMLElement {
 }
 
 const style = `
+  .controlContainer {
+    display: flex;
+    gap: 4px;
+  }
   .controlButton {
     height: 48px;
     width: 48px;
+  }
+  
+  .display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #554f55;
+    color: white;
+    font-family: monospace;
+    font-size: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
   }
 `;
