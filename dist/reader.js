@@ -5,6 +5,32 @@ class Speech {
   #rate;
   #volume;
   #voice;
+  #voices;
+  #onVoicesChange;
+  #unusedVoices = new Set([
+    "Bubbles",
+    "Bad News",
+    "Bahh",
+    "Bells",
+    "Boing",
+    "Cellos",
+    "Good News",
+    "Jester",
+    "Junior",
+    "Organ",
+    "Superstar",
+    "Trinoids",
+    "Whisper",
+    "Wobble",
+    "Zarvox",
+    "ささやき声",
+    "オルガン",
+    "スーパースター",
+    "トリノイド",
+    "ベル",
+    "道化",
+    "震え",
+  ]);
 
   /**
    *
@@ -12,10 +38,12 @@ class Speech {
    * @param {number} rate  number in range between 0.1 and 2.0. defaults to 1.
    * @param {number} voice number in range between 0.1 and 2.0. defaults to 1.
    */
-  constructor(pitch = 0.8, rate = 1, volume = 1) {
-    this.#pitch = pitch;
-    this.#rate = rate;
-    this.#volume = volume;
+  constructor({ pitch, rate, volume, onVoicesChange } = {}) {
+    this.#pitch = pitch ?? 0.8;
+    this.#rate = rate ?? 1;
+    this.#volume = volume ?? 1;
+    this.#voices = [];
+    this.#onVoicesChange = onVoicesChange;
     globalThis.speechSynthesis.addEventListener("voiceschanged", () =>
       this.#getVoice()
     );
@@ -45,6 +73,26 @@ class Speech {
       volume: this.#volume,
       voice: this.#voice,
     };
+  }
+
+  get voices() {
+    return this.#voices;
+  }
+
+  get voiceURI() {
+    return this.#voice?.voiceURI;
+  }
+
+  /**
+   * @param {string} value URI of voice from list to use
+   */
+  set voiceURI(value) {
+    const nextVoice = this.#voices.find((v) => v.voiceURI === value);
+    if (nextVoice) {
+      this.#voice = nextVoice;
+    } else {
+      console.warn(`Could not find URI "${value}"`);
+    }
   }
 
   /**
@@ -77,10 +125,18 @@ class Speech {
 
   #getVoice() {
     const voices = globalThis.speechSynthesis.getVoices();
-    const enVoices = voices.filter((v) => v.lang.startsWith("en"));
+    const enVoices = voices.filter(
+      (v) =>
+        v.lang.startsWith("en") &&
+        v.localService &&
+        !v.voiceURI.toLocaleLowerCase().startsWith("grand") &&
+        !this.#unusedVoices.has(v.voiceURI)
+    );
     const voice =
       enVoices.find((v) => v.voiceURI.startsWith("Arthur")) ?? enVoices[0];
     this.#voice = voice;
+    this.#voices = enVoices;
+    this.#onVoicesChange?.(enVoices);
   }
 
   #speakUtteranceAsync(text, options) {
@@ -90,10 +146,12 @@ class Speech {
 
     return new Promise((resolve, reject) => {
       const utt = new globalThis.SpeechSynthesisUtterance(text);
-      utt.voice = options?.voice ?? this.#voice;
+      // utt.voice = options?.voice ?? this.#voice;
+      utt.voiceURI = options?.voice?.voiceURI ?? this.#voice?.voiceURI;
+      utt.lang = options?.voice?.lang ?? this.#voice?.lang ?? "en-US";
       utt.pitch = options?.pitch ?? this.#pitch;
       utt.rate = options?.rate ?? this.#rate;
-      utt.volume = options?.volume ?? this.#voice;
+      utt.volume = options?.volume ?? this.#volume;
       utt.addEventListener("end", resolve, { once: true });
       utt.addEventListener(
         "error",
@@ -130,9 +188,12 @@ class Reader {
    * @constructor
    * @param {ContentBlock[]} contents
    */
-  constructor(contents = []) {
+  constructor(onVoicesChange, contents = []) {
     this.#contents = contents;
     this.#index = 0;
+    this.#speech = new Speech({
+      onVoicesChange: (voices) => onVoicesChange(voices),
+    });
   }
 
   /**
@@ -156,6 +217,21 @@ class Reader {
    */
   get index() {
     return this.#index;
+  }
+
+  get voices() {
+    return this.#speech.voices;
+  }
+
+  get voiceURI() {
+    return this.#speech.voiceURI;
+  }
+
+  /**
+   * @param {string} value URI of voice from list to use
+   */
+  set voiceURI(value) {
+    this.#speech.voiceURI = value;
   }
 
   /**
@@ -306,7 +382,7 @@ class ReaderControl extends HTMLElement {
 
   constructor() {
     super();
-    this.#reader = new Reader();
+    this.#reader = new Reader(() => this.#updateVoiceSelect());
     this.#reader.onchange = () => this.#updateDisplay();
     const root = this.attachShadow({ mode: "open" });
     this.#renderChildren(root);
@@ -320,11 +396,20 @@ class ReaderControl extends HTMLElement {
   connectedCallback() {
     this.#updateReadableContents();
     this.#updateDisplay();
+    this.#updateVoiceSelect();
   }
 
   #updateDisplay() {
     const text = `${this.#reader.index + 1} / ${this.#reader.length}`;
     this.#dom.display.textContent = text;
+  }
+
+  #updateVoiceSelect() {
+    const voices = this.#reader.voices;
+    const voiceURI = this.#reader.voiceURI;
+    const selectEl = this.#createVoiceSelect(voices ?? [], voiceURI);
+    this.#dom.select.replaceWith(selectEl);
+    this.#dom.select = selectEl;
   }
 
   #getTagDepth(tag) {
@@ -369,14 +454,19 @@ class ReaderControl extends HTMLElement {
       dom[name] = btnEl;
     }
 
-    root.appendChild(div);
-    const styleEl = this.#createStyle(style);
-    root.appendChild(styleEl);
     const display = document.createElement("div");
     display.classList.add("display");
     display.textContent = "0 / 0";
-    div.insertBefore(display, dom.refresh);
     dom["display"] = display;
+    div.insertBefore(display, dom.refresh);
+    root.appendChild(div);
+
+    const styleEl = this.#createStyle(style);
+    root.appendChild(styleEl);
+
+    const selectEl = this.#createVoiceSelect([]);
+    root.appendChild(selectEl);
+    dom["select"] = selectEl;
     this.#dom = dom;
   }
 
@@ -392,6 +482,28 @@ class ReaderControl extends HTMLElement {
     const el = document.createElement("style");
     el.textContent = css;
     return el;
+  }
+
+  #onChangeVoice(e) {
+    this.#reader.stop();
+    this.#reader.voiceURI = e.target.value;
+  }
+
+  #createVoiceSelect(voices, voiceURI) {
+    const selectEl = document.createElement("select");
+    selectEl.addEventListener("change", (e) => this.#onChangeVoice(e));
+    const index = voices.findIndex((v) => v.voiceURI === voiceURI);
+    if (index < 0) return selectEl;
+
+    for (const voice of voices) {
+      const optionEl = document.createElement("option");
+      optionEl.value = voice.voiceURI;
+      const [cleanName] = voice.name.split("(");
+      optionEl.innerText = `${cleanName} (${voice.lang})`;
+      optionEl.selected = voice.voiceURI === voiceURI;
+      selectEl.appendChild(optionEl);
+    }
+    return selectEl;
   }
 }
 
