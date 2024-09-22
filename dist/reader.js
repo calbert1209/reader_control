@@ -3,16 +3,19 @@ class Speech {
   #speaking = false;
   #pitch;
   #rate;
+  #volume;
   #voice;
 
   /**
    *
    * @param {number} pitch number in range between 0.1 and 2.0. defaults to 1.8.
    * @param {number} rate  number in range between 0.1 and 2.0. defaults to 1.
+   * @param {number} voice number in range between 0.1 and 2.0. defaults to 1.
    */
-  constructor(pitch = 0.8, rate = 1) {
+  constructor(pitch = 0.8, rate = 1, volume = 1) {
     this.#pitch = pitch;
     this.#rate = rate;
+    this.#volume = volume;
     globalThis.speechSynthesis.addEventListener("voiceschanged", () =>
       this.#getVoice()
     );
@@ -27,18 +30,34 @@ class Speech {
   }
 
   /**
+   * @typedef {object} SpeechSettings
+   * @property {number} rate
+   * @property {number} pitch
+   * @property {number} volume
+   * @property {SpeechSynthesisVoice} voice
+   *
+   * @returns {SpeechSettings}
+   */
+  get settings() {
+    return {
+      rate: this.#rate,
+      pitch: this.#pitch,
+      volume: this.#volume,
+      voice: this.#voice,
+    };
+  }
+
+  /**
    *
    * @param {string} text
    * @param {Object} options
    * @param {SpeechSynthesisVoice} options.voice voice to use
    * @param {number} options.pitch pitch of speech from range 0.1 to 2.0
    * @param {number} options.rate rate of speech from range 0.1 to 2.0
-   * @returns
+   * @param {number} options.volume volume of speech from range 0.1 to 2.0
+   * @returns {Promise<void>}
    */
-  async speakAsync(
-    text,
-    options = { voice: this.#voice, pitch: this.#pitch, rate: this.#rate }
-  ) {
+  async speakAsync(text, options) {
     if (this.#speaking) return;
 
     this.#speaking = true;
@@ -64,19 +83,17 @@ class Speech {
     this.#voice = voice;
   }
 
-  #speakUtteranceAsync(
-    text,
-    options = { voice: this.#voice, pitch: this.#pitch, rate: this.#rate }
-  ) {
+  #speakUtteranceAsync(text, options) {
     if (!this.#voice) {
       this.#getVoice();
     }
 
     return new Promise((resolve, reject) => {
       const utt = new globalThis.SpeechSynthesisUtterance(text);
-      utt.voice = options.voice;
-      utt.pitch = options.pitch;
-      utt.rate = options.rate;
+      utt.voice = options?.voice ?? this.#voice;
+      utt.pitch = options?.pitch ?? this.#pitch;
+      utt.rate = options?.rate ?? this.#rate;
+      utt.volume = options?.volume ?? this.#voice;
       utt.addEventListener("end", resolve, { once: true });
       utt.addEventListener(
         "error",
@@ -98,6 +115,7 @@ class Speech {
  * @typedef {object} ContentBlock - represents a block of content to be read
  * @property {string} text - the text to be read
  * @property {string} tag - the HTML tag that holds the text to be read
+ * @property {number} depth - blocks depth in the content hierarchy
  */
 
 class Reader {
@@ -233,7 +251,37 @@ class Reader {
       console.warn(`No content found at index ${this.#index}`);
     }
     if (this.#speech.speaking) return;
-    await this.#speech.speakAsync(content.text);
+
+    const speechOptions = this.#getProsody(content);
+    await this.#speech.speakAsync(content.text, speechOptions);
+  }
+
+  get #prosodyMap() {
+    return {
+      h1: { rate: 0.6, pitch: 0.7, volume: 1, postPause: 180 },
+      h2: { rate: 0.6, pitch: 0.7, volume: 1, postPause: 150 },
+      h3: { rate: 0.7, pitch: 0.8, volume: 1, postPause: 120 },
+      h4: { rate: 0.7, pitch: 0.8, volume: 1, postPause: 90 },
+      h5: { rate: 0.8, pitch: 0.9, volume: 1, postPause: 60 },
+      h6: { rate: 0.8, pitch: 0.9, volume: 1, postPause: 30 },
+    };
+  }
+
+  /**
+   * @param {ContentBlock} block
+   */
+  #getProsody({ tag }) {
+    const { settings } = this.#speech;
+    const { rate: sR, pitch: sP, volume: sV } = settings;
+    const prosodyDelta = this.#prosodyMap[tag];
+    if (!prosodyDelta) return settings;
+
+    const { rate: dR, pitch: dP, volume: dV } = prosodyDelta;
+    return {
+      rate: sR * dR,
+      pitch: sP * dP,
+      volume: sV * dV,
+    };
   }
 }
 
@@ -265,6 +313,16 @@ class ReaderControl extends HTMLElement {
     this.#dom.display.textContent = text;
   }
 
+  #getTagDepth(tag) {
+    if (!/^h/.test(tag)) {
+      return 0;
+    }
+
+    const level = parseInt(tag[1], 10);
+
+    return isNaN(level) ? 0 : level;
+  }
+
   #updateReadableContents() {
     const contents = document.querySelectorAll(".readable > *");
     const readable = [...contents].map((el) => {
@@ -272,7 +330,9 @@ class ReaderControl extends HTMLElement {
         .replace(/\n/gi, "")
         .replace(/\s{2,}/gi, " ")
         .trim();
-      return { text, tag: el.tagName.toLowerCase() };
+      const tag = el.tagName.toLowerCase();
+      const depth = this.#getTagDepth(tag);
+      return { text, tag, depth };
     });
 
     this.#reader.contents = readable;
