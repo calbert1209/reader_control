@@ -241,6 +241,12 @@ class Reader {
     }
   }
 
+  async #silence(ms) {
+    return new Promise((resolve) => {
+      globalThis.setTimeout(resolve, ms);
+    });
+  }
+
   /**
    * Read the content block at the current index
    * @returns {Promise<void>}
@@ -252,8 +258,10 @@ class Reader {
     }
     if (this.#speech.speaking) return;
 
-    const speechOptions = this.#getProsody(content);
+    const { postPause, ...speechOptions } = this.#getProsody(content);
+    await this.#silence(postPause);
     await this.#speech.speakAsync(content.text, speechOptions);
+    await this.#silence(postPause);
   }
 
   get #prosodyMap() {
@@ -274,13 +282,19 @@ class Reader {
     const { settings } = this.#speech;
     const { rate: sR, pitch: sP, volume: sV } = settings;
     const prosodyDelta = this.#prosodyMap[tag];
-    if (!prosodyDelta) return settings;
+    if (!prosodyDelta) {
+      return {
+        ...settings,
+        postPause: 30,
+      };
+    }
 
-    const { rate: dR, pitch: dP, volume: dV } = prosodyDelta;
+    const { rate: dR, pitch: dP, volume: dV, postPause } = prosodyDelta;
     return {
       rate: sR * dR,
       pitch: sP * dP,
       volume: sV * dV,
+      postPause,
     };
   }
 }
