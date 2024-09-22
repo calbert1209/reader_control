@@ -3,8 +3,6 @@ import * as Icons from "./Icons.js";
 
 export class ReaderControl extends HTMLElement {
   #dom;
-  #readableContents;
-  #index = 0;
   #reader;
 
   constructor() {
@@ -14,7 +12,7 @@ export class ReaderControl extends HTMLElement {
     const root = this.attachShadow({ mode: "open" });
     this.#renderChildren(root);
 
-    this.#dom.play.addEventListener("click", () => this.#read());
+    this.#dom.play.addEventListener("click", () => this.#reader.readOnAsync());
     this.#dom.next.addEventListener("click", () => this.#reader.next());
     this.#dom.prev.addEventListener("click", () => this.#reader.prev());
     this.#dom.stop.addEventListener("click", () => this.#reader.stop());
@@ -23,10 +21,6 @@ export class ReaderControl extends HTMLElement {
   connectedCallback() {
     this.#updateReadableContents();
     this.#updateDisplay();
-  }
-
-  #read() {
-    this.#reader.readOnAsync();
   }
 
   #updateDisplay() {
@@ -45,7 +39,6 @@ export class ReaderControl extends HTMLElement {
     });
     console.log("readable contents", readable);
 
-    this.#readableContents = readable;
     this.#reader.contents = readable.map((x) => x.text);
   }
 

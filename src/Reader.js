@@ -71,6 +71,8 @@ export class Reader {
   }
 
   async readOnAsync() {
+    if (this.#reading) return;
+
     this.#reading = true;
     while (this.#reading) {
       const currentIndex = this.index;
