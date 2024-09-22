@@ -114,7 +114,7 @@ class Reader {
    */
   constructor(contents = []) {
     this.#contents = contents;
-    this.#index = contents.length;
+    this.#index = 0;
   }
 
   /**
@@ -154,7 +154,7 @@ class Reader {
    */
   set contents(values) {
     this.#contents = values;
-    this.#index = values.length;
+    this.#index = 0;
   }
 
   #_next() {
@@ -197,7 +197,7 @@ class Reader {
    * Reset the index to 0
    */
   reset() {
-    this.#index = contents.length;
+    this.#index = 0;
     this.#onchange(0);
   }
 
@@ -233,7 +233,7 @@ class Reader {
       console.warn(`No content found at index ${this.#index}`);
     }
     if (this.#speech.speaking) return;
-    await this.#speech.speakAsync(content);
+    await this.#speech.speakAsync(content.text);
   }
 }
 
@@ -275,7 +275,7 @@ class ReaderControl extends HTMLElement {
       return { text, tag: el.tagName.toLowerCase() };
     });
 
-    this.#reader.contents = readable.map((x) => x.text);
+    this.#reader.contents = readable;
   }
 
   #renderChildren(root) {
