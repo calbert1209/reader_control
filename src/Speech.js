@@ -1,10 +1,12 @@
 export class Speech {
   #speaking = false;
   #pitch;
+  #rate;
   #voice;
 
-  constructor(pitch = 0.8) {
+  constructor(pitch = 0.8, rate = 1) {
     this.#pitch = pitch;
+    this.#rate = rate;
     window.speechSynthesis.addEventListener("voiceschanged", () =>
       this.#getVoice()
     );
@@ -37,15 +39,19 @@ export class Speech {
     this.#voice = voice;
   }
 
-  #speakUtteranceAsync(text) {
+  #speakUtteranceAsync(
+    text,
+    options = { voice: this.#voice, pitch: this.#pitch, rate: this.#rate }
+  ) {
     if (!this.#voice) {
       this.#getVoice();
     }
 
     return new Promise((resolve, reject) => {
       const utt = new globalThis.SpeechSynthesisUtterance(text);
-      utt.voice = this.#voice;
-      utt.pitch = this.#pitch;
+      utt.voice = options.voice;
+      utt.pitch = options.pitch;
+      utt.rate = options.rate;
       utt.addEventListener("end", resolve, { once: true });
       utt.addEventListener(
         "error",
