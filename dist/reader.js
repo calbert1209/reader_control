@@ -423,8 +423,8 @@ class ReaderControl extends HTMLElement {
     const voices = this.#reader.voices;
     const voiceURI = this.#reader.voiceURI;
     const selectEl = this.#createVoiceSelect(voices ?? [], voiceURI);
-    this.#dom.select.replaceWith(selectEl);
-    this.#dom.select = selectEl;
+    this.#dom.voiceSelect.replaceWith(selectEl);
+    this.#dom.voiceSelect = selectEl;
   }
 
   #getTagDepth(tag) {
@@ -453,8 +453,8 @@ class ReaderControl extends HTMLElement {
   }
 
   #renderChildren(root) {
-    const div = document.createElement("div");
-    div.classList.add("controlContainer");
+    const buttonRow = document.createElement("div");
+    buttonRow.classList.add("buttonRow");
     const buttons = [
       { icon: Icons.prev, name: "prev" },
       { icon: Icons.stop, name: "stop" },
@@ -465,7 +465,7 @@ class ReaderControl extends HTMLElement {
     const dom = {};
     for (const { icon, name } of buttons) {
       const btnEl = this.#createButton({ icon, name });
-      div.appendChild(btnEl);
+      buttonRow.appendChild(btnEl);
       dom[name] = btnEl;
     }
 
@@ -473,22 +473,25 @@ class ReaderControl extends HTMLElement {
     display.classList.add("display");
     display.textContent = "0 / 0";
     dom["display"] = display;
-    div.insertBefore(display, dom.refresh);
+    buttonRow.insertBefore(display, dom.refresh);
 
-    root.appendChild(div);
+    root.appendChild(buttonRow);
+
+    const selectRow = document.createElement("div");
+    selectRow.classList.add("selectRow");
 
     const voiceSelect = this.#createVoiceSelect([]);
-    root.appendChild(voiceSelect);
-    dom["select"] = voiceSelect;
-    this.#dom = dom;
+    selectRow.appendChild(voiceSelect);
+    dom["voiceSelect"] = voiceSelect;
 
     const rateSelect = this.#createRateSelect();
-    root.appendChild(rateSelect);
-    // dom["select"] = voiceSelect;
-    // this.#dom = dom;
+    selectRow.appendChild(rateSelect);
+    dom["rateSelect"] = rateSelect;
+    root.appendChild(selectRow);
 
     const styleEl = this.#createStyle(style);
     root.appendChild(styleEl);
+    this.#dom = dom;
   }
 
   #createButton({ icon, name }) {
@@ -555,7 +558,7 @@ const Icons = {
 };
 
 const style = `
-  .controlContainer {
+  .buttonRow {
     display: flex;
     gap: 4px;
   }
@@ -595,6 +598,26 @@ const style = `
     width: 48px;
     height: 48px;
     border-radius: 4px;
+  }
+
+  .selectRow {
+    margin-top: 4px;
+    display: flex;
+    gap: 4px;
+    }
+    
+  .selectRow select {
+    font-size: 0.9rem;
+    padding: 4px;
+    color: #5f6368;
+  }
+
+  .selectRow select:nth-child(1) {
+    width: 180px;
+  }
+  
+  .selectRow select:nth-child(2) {
+    width: calc(256px - 184px);
   }
 `;
 
