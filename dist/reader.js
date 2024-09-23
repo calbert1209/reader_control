@@ -538,6 +538,7 @@
       selectEl.addEventListener("change", (e) => {
         const input = parseInt(e.target.value, 10) / 10;
         if (!isNaN(input)) {
+          this.#reader.stop();
           this.#reader.rate = input;
         }
       });
