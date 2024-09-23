@@ -4,6 +4,8 @@ A web component to easily control browser speech synthesis (TTS).
 
 ![Screenshot of Reader-Control web component](./screenshot.png)
 
+[Demo Page](https://calbert1209.github.io/reader_control/)
+
 ## Setup
 
 1. add `reader.js` to your page via clone or [CDN](https://cdn.jsdelivr.net/gh/calbert1209/reader_control/reader.js)

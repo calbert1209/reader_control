@@ -5,6 +5,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reader Control Web Component</title>
+  <style>
+    .citation {
+      background-color: rgba(0, 0, 0, 0.18);
+      padding: 8px 16px;
+      font-family: monospace;
+      color: hsl(0, 0%, 25%);
+      border-radius: 4px;
+    }
+
+    .citation a {
+      color: hsl(0, 0%, 20%);
+    }
+  </style>
 </head>
 
 <body>
@@ -41,6 +54,11 @@
     <h2 id="you">You</h2>
     <p>Everything written in this book is written to destroy the ideas of culture and law. The lesson of this book is
       simple: nothing on earth is more valuable than you.</p>
+  </section>
+
+  <section class="citation">
+    <h4>Except from Jeremy Locke's<i><a href="https://archive.org/details/the-end-of-all-evil-jeremy-locke">The End of
+          Evil</a></i></h4>
   </section>
   <script type="module" src="reader.js"></script>
 </body>
