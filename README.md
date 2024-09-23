@@ -1,13 +1,19 @@
 # Reader Control Web Component
 
-A web component to simplify browser speech synthesis (TTS).
+A web component to easily control browser speech synthesis (TTS).
 
 ![Screenshot of Reader-Control web component](./screenshot.png)
 
 ## Setup
 
-1. add `reader.js` to your page
+1. add `reader.js` to your page via clone or [CDN](https://cdn.jsdelivr.net/gh/calbert1209/reader_control/reader.js)
 2. wrap all contents that you want read aloud in a `<section class="readable"></section>` block.
+
+## Use Via CDN
+
+```
+https://cdn.jsdelivr.net/gh/calbert1209/reader_control/reader.js
+```
 
 ## Questions
 
