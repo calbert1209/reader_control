@@ -96,6 +96,14 @@ class Speech {
   }
 
   /**
+   * @param {number} value
+   */
+  set rate(value) {
+    const clamped = Math.max(0, Math.min(value, 2));
+    this.#rate = clamped;
+  }
+
+  /**
    *
    * @param {string} text
    * @param {Object} options
@@ -232,6 +240,13 @@ class Reader {
    */
   set voiceURI(value) {
     this.#speech.voiceURI = value;
+  }
+
+  /**
+   * @param {number} value
+   */
+  set rate(value) {
+    this.#speech.rate = value;
   }
 
   /**
@@ -459,15 +474,21 @@ class ReaderControl extends HTMLElement {
     display.textContent = "0 / 0";
     dom["display"] = display;
     div.insertBefore(display, dom.refresh);
+
     root.appendChild(div);
+
+    const voiceSelect = this.#createVoiceSelect([]);
+    root.appendChild(voiceSelect);
+    dom["select"] = voiceSelect;
+    this.#dom = dom;
+
+    const rateSelect = this.#createRateSelect();
+    root.appendChild(rateSelect);
+    // dom["select"] = voiceSelect;
+    // this.#dom = dom;
 
     const styleEl = this.#createStyle(style);
     root.appendChild(styleEl);
-
-    const selectEl = this.#createVoiceSelect([]);
-    root.appendChild(selectEl);
-    dom["select"] = selectEl;
-    this.#dom = dom;
   }
 
   #createButton({ icon, name }) {
@@ -501,6 +522,25 @@ class ReaderControl extends HTMLElement {
       const [cleanName] = voice.name.split("(");
       optionEl.innerText = `${cleanName} (${voice.lang})`;
       optionEl.selected = voice.voiceURI === voiceURI;
+      selectEl.appendChild(optionEl);
+    }
+    return selectEl;
+  }
+
+  #createRateSelect() {
+    const selectEl = document.createElement("select");
+    selectEl.addEventListener("change", (e) => {
+      const input = parseInt(e.target.value, 10) / 10;
+      if (!isNaN(input)) {
+        this.#reader.rate = input;
+      }
+    });
+
+    for (let i = 1; i < 21; i += 1) {
+      const optionEl = document.createElement("option");
+      optionEl.value = i;
+      optionEl.innerText = `${(i / 10).toFixed(1)} x`;
+      optionEl.selected = i === 10;
       selectEl.appendChild(optionEl);
     }
     return selectEl;
